@@ -1,6 +1,8 @@
-import React from 'react'
-import { KeyboardAvoidingView, Platform, Text, View, TextInput, TouchableOpacity, Keyboard } from 'react-native'
+import React, { useContext, useEffect } from 'react'
+import { KeyboardAvoidingView, Platform, Text, View, TextInput, TouchableOpacity, Keyboard, Alert } from 'react-native'
 
+
+import { AuthContext } from '../context/AuthContext';
 import { loginStyles } from '../theme/loginTheme'
 
 import { WhiteLogo } from '../components/WhiteLogo'
@@ -13,15 +15,32 @@ interface Props extends StackScreenProps<any,any>{}
 
 export const RegisterScreen = ( { navigation }: Props ) => {
 
+    const { signUp, errorMessage, removeError } = useContext( AuthContext );
+
     const { email, password, name, onChange } = useForm({
         name: '',
         email: '',
         password: '' 
      });
+
+     useEffect(() => {
+        if( errorMessage.length === 0 ) return;
+
+        Alert.alert( 'Registro incorrecto', errorMessage,[{
+            text: 'Ok',
+            onPress: removeError
+        }]);
+
+    }, [ errorMessage ])
  
      const onRegister = () => {
          console.log({email, password, name});
          Keyboard.dismiss();
+         signUp({
+             nombre: name,
+             correo: email,
+             password
+         });
      }
 
 
@@ -50,8 +69,8 @@ export const RegisterScreen = ( { navigation }: Props ) => {
                         ]}
                         selectionColor="white"
 
-                        onChangeText={ (value) => onChange(value, 'email') }
-                        value={ email }
+                        onChangeText={ (value) => onChange(value, 'name') }
+                        value={ name }
                         onSubmitEditing={ onRegister }
 
                         autoCapitalize="words"
