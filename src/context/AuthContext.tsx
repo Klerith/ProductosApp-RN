@@ -1,4 +1,6 @@
-import React, { createContext, useReducer } from 'react';
+import React, { createContext, useEffect, useReducer } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import cafeApi from '../api/cafeApi';
 
 import { Usuario, LoginResponse, LoginData } from '../interfaces/appInterfaces';
@@ -30,21 +32,63 @@ export const AuthProvider = ({ children }: any)=> {
 
     const [ state, dispatch ] = useReducer( authReducer, authInicialState);
 
+    useEffect(() => {
+        checkToken();
+    }, [])
+
+    const checkToken = async() => {
+        const token = await AsyncStorage.getItem('token');
+        
+        // No token, no autenticado
+        if ( !token ) return dispatch({ type: 'notAuthenticated' });
+
+        // Hay token
+        const resp = await cafeApi.get('/auth');
+        if ( resp.status !== 200 ) {
+            return dispatch({ type: 'notAuthenticated' });
+        }
+        
+        await AsyncStorage.setItem('token', resp.data.token );
+        dispatch({ 
+            type: 'signUp',
+            payload: {
+                token: resp.data.token,
+                user: resp.data.usuario
+            }
+        });
+    }
+
+
     const signIn = async({ correo, password }: LoginData ) => {
 
         try {
          
-            const resp = await cafeApi.post<LoginResponse>('/auth/login', { correo, password } );
-            console.log(resp.data);
+            const { data } = await cafeApi.post<LoginResponse>('/auth/login', { correo, password } );
+            dispatch({ 
+                type: 'signUp',
+                payload: {
+                    token: data.token,
+                    user: data.usuario
+                }
+            });
+
+            await AsyncStorage.setItem('token', data.token );
 
         } catch (error) {
-            console.log(error);
+            console.log(error.response.data.msg);
+            dispatch({ 
+                type: 'addError', 
+                payload: error.response.data.msg || 'Información incorrecta'
+            })
         }
     };
     
     const signUp = () => {};
     const logOut = () => {};
-    const removeError = () => {};
+
+    const removeError = () => {
+        dispatch({ type: 'removeError' });
+    };
 
     return (
         <AuthContext.Provider value={{
